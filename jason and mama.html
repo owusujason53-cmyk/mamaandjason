@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mama & Jason Chat</title>
+  <meta charset="UTF-8" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      text-align: center;
+      padding: 20px;
+    }
+    #login, #chat {
+      background: white;
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    #messages {
+      text-align: left;
+      height: 300px;
+      overflow-y: scroll;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #fafafa;
+    }
+    input[type="text"], input[type="password"], input[type="file"] {
+      width: 90%;
+      padding: 10px;
+      margin: 5px 0;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    img, video {
+      max-width: 100%;
+      margin-top: 5px;
+      border-radius: 6px;
+    }
+    .msg {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="login">
+  <h2>🔐 Secure Login</h2>
+  <input type="password" id="password" placeholder="Enter password" />
+  <br>
+  <button onclick="checkPassword()">Login</button>
+</div>
+
+<div id="chat" style="display:none">
+  <h2>💬 Mama & Jason Chat</h2>
+  <div id="messages"></div>
+  <input type="text" id="messageInput" placeholder="Type a message..." />
+  <br>
+  <input type="file" id="fileInput" />
+  <br>
+  <button onclick="sendMessage()">Send</button>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
+<script>
+  const correctPassword = "mamaandjason";
+
+  function checkPassword() {
+    const input = document.getElementById("password").value;
+    if (input === correctPassword) {
+      document.getElementById("login").style.display = "none";
+      document.getElementById("chat").style.display = "block";
+    } else {
+      alert("❌ Wrong password!");
+    }
+  }
+
+  // 🔧 Replace this config with your actual Firebase config:
+  const firebaseConfig = {apiKey: "AIzaSyA3wcspZ1xgXAPpMX0bZ_UqHZXcgRF8S_Q",
+  authDomain: "mama-and-jason.firebaseapp.com",
+  projectId: "mama-and-jason",
+  storageBucket: "mama-and-jason.firebasestorage.app",
+  messagingSenderId: "1049856284471",
+  appId: "1:1049856284471:web:a889aeb1bb7b9a49712cb2",
+  measurementId: "G-0P2VW0RJ9G"
+};
+
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const storage = firebase.storage();
+  const messagesRef = db.ref("messages");
+
+  messagesRef.on("child_added", snap => {
+    const msg = snap.val();
+    const container = document.createElement("div");
+    container.className = "msg";
+    
+    if (msg.text) {
+      const p = document.createElement("p");
+      p.innerText = msg.text;
+      container.appendChild(p);
+    }
+    if (msg.fileUrl) {
+      if (msg.fileType.startsWith("image")) {
+        const img = document.createElement("img");
+        img.src = msg.fileUrl;
+        container.appendChild(img);
+      } else if (msg.fileType.startsWith("video")) {
+        const video = document.createElement("video");
+        video.src = msg.fileUrl;
+        video.controls = true;
+        container.appendChild(video);
+      } else {
+        const link = document.createElement("a");
+        link.href = msg.fileUrl;
+        link.innerText = "Download File";
+        link.target = "_blank";
+        container.appendChild(link);
+      }
+    }
+    document.getElementById("messages").appendChild(container);
+    document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+  });
+
+  function sendMessage() {
+    const text = document.getElementById("messageInput").value.trim();
+    const file = document.getElementById("fileInput").files[0];
+
+    if (text) {
+      messagesRef.push({ text });
+      document.getElementById("messageInput").value = "";
+    }
+
+    if (file) {
+      const fileRef = storage.ref("files/" + Date.now() + "_" + file.name);
+      fileRef.put(file).then(snapshot => {
+        snapshot.ref.getDownloadURL().then(url => {
+          messagesRef.push({
+            fileUrl: url,
+            fileType: file.type
+          });
+        });
+      });
+    }
+
+    document.getElementById("fileInput").value = "";
+  }
+</script>
+
+</body>
+</html>
